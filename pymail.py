@@ -1,11 +1,11 @@
 import smtplib
 import ssl
-import env
+import env, secrets
 from email.message import EmailMessage
 
 email_sender = env.EMAIL_ADDRESS
-email_password = env.EMAIL_PASSWORD
-email_receiver = env.EMAIL_RECEIVER
+email_password = secrets.EMAIL_PASSWORD
+email_receiver = env.EMAIL_RECEIVERS
 
 SUBJECT = 'check out my new site'
 BODY = """
@@ -25,7 +25,6 @@ def send_mail():
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
         smtp.login(email_sender, email_password)
         smtp.sendmail(email_sender, email_receiver, mail.as_string())
-    
     print(f'Mail delivered')
 
 if __name__  == "__main__":
