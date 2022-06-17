@@ -1,4 +1,4 @@
-EMAIL_ADDRESS = 'enter senders email address'
-EMAIL_RECEIVERS = ['enter list of email receivers']
+EMAIL_ADDRESS = ''
+EMAIL_RECEIVERS = []
 
-HTML_FILE = 'enter name of html file'
+HTML_FILE = ''
