@@ -14,9 +14,9 @@ SMTP_PORT: int = 465
 SMTP_PORTS: tuple = (465, 25, 26, 587, 2525)
 
 # email settings
-SENDER_EMAIL: str = 'mightyjoe5@gmail.com'
-RECEIVER_EMAIL: str = 'lekoj.market@gmail.com'
-RECIEVERS_LIST: list = ['kojo@lekoj.com', 'lekoj.market@gmail.com', 'lekoj2500@gmail.com']
+SENDER_EMAIL: str = ''
+RECEIVER_EMAIL: str = ''
+RECIEVERS_LIST: list = []
 EMAIL_SUBJECT: str = ''
 HTML_FILENAME: str = 'no_income_no_asset.html'
 
