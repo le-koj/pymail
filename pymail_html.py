@@ -1,165 +1,138 @@
-"""HTML Email Client Agent
+"""HTML Email Client Agent for sending HTML emails via SMTP.
 
-This script allows the user to send an html file as 
-email using google gmail or their own email service provider
+This module provides functions to send HTML-formatted emails using Gmail or
+any SMTP provider. It supports single recipients and bulk sending to a list,
+with configuration sourced from ``env.py`` and ``app_secrets.py``.
 
-This script requires the senders email address, email password,
-the receiver's email, and the email subject.
+Dependencies:
+    env: SMTP settings, sender/recipient addresses, subject, and HTML filename.
+    app_secrets: Sender email password or App Password (see ``EMAIL_PASSWORD``).
 
-This script needs 2 personal files:
-    env.py - which has the following global settings:
-        
-        SMTP_HOST: str = 'smtp.gmail.com'
-        SMTP_PORT: int = 465
+Configuration:
+    Requires two configuration modules:
 
-        SENDER_EMAIL: str = 'example@domain.com'
-        RECEIVER_EMAIL: str = 'example@example.com'
-        RECIEVERS_LIST: list = []
-        EMAIL_SUBJECT: str = ''
-        HTML_FILENAME: str = 'my_newsletter.html'
-        
-    app_secrets.py - which holds the password for your sender email
-        EMAIL_PASSWORD = 'sender email password'
+    ``env.py`` must define:
+        SMTP_HOST (str): SMTP server hostname (e.g. ``smtp.gmail.com``).
+        SMTP_PORT (int): SMTP port (typically 465 for SSL).
+        SENDER_EMAIL (str): Sender email address.
+        RECEIVER_EMAIL (str): Default recipient email address.
+        RECIEVERS_LIST (list): List of recipient emails for bulk send.
+        EMAIL_SUBJECT (str): Email subject line.
+        HTML_FILENAME (str): Default HTML template file path.
+        SSL_CONTEXT (ssl.SSLContext): SSL context for secure SMTP.
 
-This file can also be imported as a module and contains the following
-functions:
+    ``app_secrets.py`` must define:
+        EMAIL_PASSWORD (str): Sender password or Gmail App Password.
 
-    * get_html_doc - returns html file in string format
-    * html_email_str - generate a string version of the html email content
-    * smtp_send - sends an email using the stmp settings
-    * send_html_email - process and sends an html email content
-    * send_bulk_email - Send html emails to several recipients
+Module Attributes:
+    EMAIL_PASSWORD (str): Loaded from ``app_secrets``; may be overridden by
+        consumers (e.g. Streamlit UI) with user-supplied credentials.
 """
 
-# Import required modules
 import smtplib
 import time
+
+import app_secrets
+import env
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-# import environment variables
-import env
-import app_secrets
-
-# set smtp password
+# Sender password; may be overridden by UI or calling code
 EMAIL_PASSWORD = app_secrets.EMAIL_PASSWORD
 
 def get_html_doc(file_path: str) -> str:
-    """Open html file and return a string version
-    
-    Parameters
-    ----------
-    file_path : str
-        The file path of the html document
+    """Read an HTML file and return its contents as a string.
 
-    Returns
-    -------
-        str: string representation the full html content
+    Args:
+        file_path: Path to the HTML file on disk.
+
+    Returns:
+        The full HTML content as a UTF-8 decoded string.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        UnicodeDecodeError: If the file is not valid UTF-8.
     """
     html = ''
-    
     with open(file_path, 'r', encoding='UTF-8') as f:
         print('getting email')
         html = f.read()
     return html
 
 def html_email_str(receiver_email: str, html_doc: str) -> str:
-    """Generate a string version of the html email content
-    
-    Uses the pre-configured settings in the env.py file
-    
-    Parameters
-    ----------
-    receiver_email : str
-        The email address of the recipient
-    html_doc : str
-        The string format of the html content
+    """Build a MIME multipart email string from HTML content.
 
-    Returns
-    -------
-        str: string representation the full email content
+    Uses sender, subject, and other headers from ``env``. The HTML body is
+    attached as ``MIMEText`` with content type ``text/html``.
+
+    Args:
+        receiver_email: Recipient email address.
+        html_doc: HTML body content as a string.
+
+    Returns:
+        The complete email as a string suitable for ``smtplib.sendmail()``.
     """
-    
-    # Create a MIMEMultipart class, and set up the From, To, Subject fields
     mail = MIMEMultipart()
     mail['From'] = env.SENDER_EMAIL
     mail['To'] = receiver_email
     mail['Subject'] = env.EMAIL_SUBJECT
-
-    # Attach the html doc defined earlier, as a MIMEText html content type to the MIME message
     mail.attach(MIMEText(html_doc, "html"))
-    # Convert it as a string
-    email_string = mail.as_string()
-    return email_string
+    return mail.as_string()
 
-def smtp_send(receiver_email, email_string) -> None:
-    """Send email using smtp
-    
-    Uses the pre-configured settings in the env.py file
-    
-    Parameters
-    ----------
-    receiver_email : str
-        The email address of the recipient
-    email_string : str
-        email content in string format generated using html_email_str() function
+def smtp_send(receiver_email: str, email_string: str) -> None:
+    """Send an email via SMTP over SSL.
+
+    Connects to the SMTP server configured in ``env`` (host, port, SSL context),
+    authenticates with the sender credentials, and delivers the message.
+
+    Args:
+        receiver_email: Recipient email address.
+        email_string: Full email content as string (e.g. from ``html_email_str()``).
+
+    Raises:
+        smtplib.SMTPAuthenticationError: If login credentials are invalid.
+        smtplib.SMTPException: For other SMTP-related errors.
     """
     with smtplib.SMTP_SSL(env.SMTP_HOST, env.SMTP_PORT, context=env.SSL_CONTEXT) as smtp:
         smtp.login(env.SENDER_EMAIL, EMAIL_PASSWORD)
         smtp.sendmail(env.SENDER_EMAIL, receiver_email, email_string)
-    
     print('smtp sent', '\n')
-    return
    
 def send_html_email(receiver_email: str, html_doc: str) -> None:
-    """Send an html email to the provided email address
-    
-    Uses the pre-configured settings in the env.py file
-    
-    Parameters
-    ----------
-    receiver_email : str
-        The email address of the recipient
-    html_doc : str
-        The string format of the html content
+    """Compose and send an HTML email to a single recipient.
+
+    Builds the MIME message from the HTML content, then delivers it via
+    ``smtp_send()`` using settings from ``env``.
+
+    Args:
+        receiver_email: Recipient email address.
+        html_doc: HTML body content as a string.
     """
-    
-    # process html email for sending
     email_string = html_email_str(receiver_email=receiver_email, html_doc=html_doc)
-    
-    # send processed email to recipient
     smtp_send(receiver_email=receiver_email, email_string=email_string)
-    
     print('Mail delivered', '\n')
-    return
 
 def send_bulk_email(html_doc: str) -> None:
-    """Send html emails to several recipients
-    
-    Uses the pre-configured settings in the env.py file
-    
-    Parameters
-    ----------
-    html_doc : str
-        The string format of the html content
+    """Send the same HTML email to all recipients in ``env.RECIEVERS_LIST``.
+
+    Iterates over the list and calls ``send_html_email()`` for each address.
+
+    Args:
+        html_doc: HTML body content as a string.
     """
     print('### SENDING BULK EMAIL ###', '\n')
-    
     counter = 0
     for receiver in env.RECIEVERS_LIST:
-        send_html_email(receiver_email=receiver, html_doc=html_doc)
+        send_html_email(receiver_email=receiver.strip(), html_doc=html_doc)
         counter += 1
     print(f'{counter} Emails delivered', '\n')
-    return
-    
 
-if __name__  == "__main__":
+
+if __name__ == "__main__":
+    # Load HTML template and send to all recipients in RECIEVERS_LIST
     start = time.time()
-    
     HTML = get_html_doc(env.HTML_FILENAME)
-        
-    #send_html_email(receiver_email=env.RECEIVER_EMAIL, html_doc=HTML)
-    
+    # send_html_email(receiver_email=env.RECEIVER_EMAIL, html_doc=HTML)
     send_bulk_email(HTML)
     end = time.time()
     print(f"Time Difference: {end - start}")
