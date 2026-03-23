@@ -59,8 +59,8 @@ HEAD_TITLE = st.header(
 # Users select host and port for their email provider (Gmail, custom, etc.)
 # -----------------------------------------------------------------------------
 st.header('SMTP Settings')
-SMTP_HOST = st.text_input("SMTP HOST", 'smtp.gmail.com', placeholder='smtp.gmail.com')
-SMTP_PORT = int(st.selectbox(label='SMTP PORT', options=env.SMTP_PORTS))
+env.SMTP_HOST = st.text_input("SMTP HOST", env.SMTP_HOST, placeholder='smtp.gmail.com')
+env.SMTP_PORT = int(st.selectbox(label='SMTP PORT', options=env.SMTP_PORTS))
 
 # -----------------------------------------------------------------------------
 # Email authentication
@@ -76,10 +76,12 @@ ph.EMAIL_PASSWORD = st.text_input('Enter Your E-mail Password', '', placeholder=
 # -----------------------------------------------------------------------------
 st.header('Compose Your Message')
 env.EMAIL_SUBJECT = st.text_input("Subject", '', placeholder='Re: Free promotional phone')
-env.RECIEVERS_LIST = st.text_input(
+raw_receivers = st.text_input(
     "Recievers", '', placeholder='example@nano.com, jane@doe.com, john@doe.com'
 ).split(',')
-if len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT or len(env.RECIEVERS_LIST) <= 0:
+# Strip and filter empties: split(',') returns [''] for empty input, so len<=0 never triggers
+env.RECIEVERS_LIST = [addr.strip() for addr in raw_receivers if addr.strip()]
+if len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT or len(env.RECIEVERS_LIST) == 0:
     ERROR_MESSAGE = '<p style="font-family:Courier; color:Red; font-size: 20px;">Please enter 1 to 20 receivers</p>'
     st.markdown(ERROR_MESSAGE, unsafe_allow_html=True)
 print(env.RECIEVERS_LIST)
@@ -100,8 +102,13 @@ if HTML:
 # -----------------------------------------------------------------------------
 if st.button('Send Email'):
     try:
-        for receiver in env.RECIEVERS_LIST:
-            ph.send_html_email(receiver_email=receiver.strip(), html_doc=HTML)
-        st.write('Message Sent')
+        if len(env.RECIEVERS_LIST) == 0 or len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT:
+            st.error('Please enter 1 to 20 valid receiver addresses.')
+        elif HTML is None:
+            st.error('Please upload an HTML email template.')
+        else:
+            for receiver in env.RECIEVERS_LIST:
+                ph.send_html_email(receiver_email=receiver, html_doc=HTML)
+            st.write('Message Sent')
     except Exception as e:
         st.write(f'ERROR: {e}')
