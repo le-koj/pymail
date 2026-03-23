@@ -84,7 +84,7 @@ env.RECIEVERS_LIST = [addr.strip() for addr in raw_receivers if addr.strip()]
 if len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT or len(env.RECIEVERS_LIST) == 0:
     ERROR_MESSAGE = '<p style="font-family:Courier; color:Red; font-size: 20px;">Please enter 1 to 20 receivers</p>'
     st.markdown(ERROR_MESSAGE, unsafe_allow_html=True)
-print(env.RECIEVERS_LIST)
+#print(env.RECIEVERS_LIST)
 
 # -----------------------------------------------------------------------------
 # HTML template upload
