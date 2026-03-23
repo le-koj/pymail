@@ -5,3 +5,4 @@ pymail_html.spec
 build/
 dist/
 .DS_Store
+app_secrets.py
