@@ -82,7 +82,7 @@ pure-eval==0.2.2
 pyarrow==14.0.0
 pycparser==2.21
 pydeck==0.8.0
-Pygments==2.16.1
+Pygments==2.20.0
 pyinstaller==6.1.0
 pyinstaller-hooks-contrib==2023.10
 Pympler==1.0.1
