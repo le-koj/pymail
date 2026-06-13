@@ -29,16 +29,21 @@ Module Attributes:
         consumers (e.g. Streamlit UI) with user-supplied credentials.
 """
 
+import os
 import smtplib
 import time
 
-import app_secrets
+try:
+    import app_secrets
+    EMAIL_PASSWORD = app_secrets.EMAIL_PASSWORD
+except ImportError:
+    # In containerized dev (Mailpit) app_secrets.py may not exist;
+    # fall back to an environment variable.
+    EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
+
 import env
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
-# Sender password; may be overridden by UI or calling code
-EMAIL_PASSWORD = app_secrets.EMAIL_PASSWORD
 
 def get_html_doc(file_path: str) -> str:
     """Read an HTML file and return its contents as a string.
@@ -79,26 +84,34 @@ def html_email_str(receiver_email: str, html_doc: str) -> str:
     mail.attach(MIMEText(html_doc, "html"))
     return mail.as_string()
 
-def smtp_send(receiver_email: str, email_string: str) -> None:
-    """Send an email via SMTP over SSL.
+def smtp_send(receiver_email: str, email_string: str, *, via_mailpit: bool = False) -> None:
+    """Send an email via SMTP.
 
-    Connects to the SMTP server configured in ``env`` (host, port, SSL context),
-    authenticates with the sender credentials, and delivers the message.
+    When ``via_mailpit`` is True, delivers to the Mailpit capture server
+    (``env.MAILPIT_HOST`` / ``env.MAILPIT_PORT``) using plain SMTP without
+    authentication.  Otherwise uses ``env.SMTP_HOST`` / ``env.SMTP_PORT`` with
+    SSL and credentials.
 
     Args:
-        receiver_email: Recipient email address.
+        receiver_email: Recipient email address (used in envelope and headers).
         email_string: Full email content as string (e.g. from ``html_email_str()``).
+        via_mailpit: If True, send through Mailpit instead of production SMTP.
 
     Raises:
-        smtplib.SMTPAuthenticationError: If login credentials are invalid.
+        smtplib.SMTPAuthenticationError: If login credentials are invalid
+            (production path only).
         smtplib.SMTPException: For other SMTP-related errors.
     """
-    with smtplib.SMTP_SSL(env.SMTP_HOST, env.SMTP_PORT, context=env.SSL_CONTEXT) as smtp:
-        smtp.login(env.SENDER_EMAIL, EMAIL_PASSWORD)
-        smtp.sendmail(env.SENDER_EMAIL, receiver_email, email_string)
+    if via_mailpit:
+        with smtplib.SMTP(env.MAILPIT_HOST, env.MAILPIT_PORT) as smtp:
+            smtp.sendmail(env.SENDER_EMAIL, receiver_email, email_string)
+    else:
+        with smtplib.SMTP_SSL(env.SMTP_HOST, env.SMTP_PORT, context=env.SSL_CONTEXT) as smtp:
+            smtp.login(env.SENDER_EMAIL, EMAIL_PASSWORD)
+            smtp.sendmail(env.SENDER_EMAIL, receiver_email, email_string)
     print('smtp sent', '\n')
    
-def send_html_email(receiver_email: str, html_doc: str) -> None:
+def send_html_email(receiver_email: str, html_doc: str, *, via_mailpit: bool = False) -> None:
     """Compose and send an HTML email to a single recipient.
 
     Builds the MIME message from the HTML content, then delivers it via
@@ -107,9 +120,10 @@ def send_html_email(receiver_email: str, html_doc: str) -> None:
     Args:
         receiver_email: Recipient email address.
         html_doc: HTML body content as a string.
+        via_mailpit: If True, capture via Mailpit instead of production SMTP.
     """
     email_string = html_email_str(receiver_email=receiver_email, html_doc=html_doc)
-    smtp_send(receiver_email=receiver_email, email_string=email_string)
+    smtp_send(receiver_email=receiver_email, email_string=email_string, via_mailpit=via_mailpit)
     print('Mail delivered', '\n')
 
 def send_bulk_email(html_doc: str) -> None:

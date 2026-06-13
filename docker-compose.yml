@@ -1,0 +1,54 @@
+services:
+  # ── Python / Streamlit application ──────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - MAILPIT_HOST=mailpit
+      - MAILPIT_PORT=1025
+    volumes:
+      - .:/workspace:cached
+    depends_on:
+      - mailpit
+    networks:
+      - pymail-net
+
+  # ── Mailpit – local SMTP capture & Web UI ──────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # Web UI
+      - "1025:1025"   # SMTP
+    environment:
+      - MP_SMTP_BIND_ADDR=0.0.0.0:1025
+      - MP_HTTP_BIND_ADDR=0.0.0.0:8025
+      - MP_ENABLE_SPAMASSASSIN=spamassassin:783
+      - MP_MAX_MESSAGES=500
+      - MP_DATABASE=/data/mailpit.db
+    volumes:
+      - mailpit-data:/data
+    depends_on:
+      - spamassassin
+    networks:
+      - pymail-net
+
+  # ── SpamAssassin – spam scoring daemon ─────────────────────────────
+  spamassassin:
+    image: axllent/spamassassin:latest
+    environment:
+      - DNS_CHECKS=1
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    networks:
+      - pymail-net
+
+volumes:
+  mailpit-data:
+
+networks:
+  pymail-net:
+    driver: bridge

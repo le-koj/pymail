@@ -59,8 +59,18 @@ HEAD_TITLE = st.header(
 # Users select host and port for their email provider (Gmail, custom, etc.)
 # -----------------------------------------------------------------------------
 st.header('SMTP Settings')
-env.SMTP_HOST = st.text_input("SMTP HOST", env.SMTP_HOST, placeholder='smtp.gmail.com')
-env.SMTP_PORT = int(st.selectbox(label='SMTP PORT', options=env.SMTP_PORTS))
+send_via_mailpit = st.checkbox(
+    'Send to Mailpit (local testing — captures mail without delivering to real inboxes)',
+    value=False,
+)
+if send_via_mailpit:
+    st.caption(
+        f'Mailpit SMTP: {env.MAILPIT_HOST}:{env.MAILPIT_PORT} · '
+        'View captured messages at http://localhost:8025'
+    )
+else:
+    env.SMTP_HOST = st.text_input("SMTP HOST", env.SMTP_HOST, placeholder='smtp.gmail.com')
+    env.SMTP_PORT = int(st.selectbox(label='SMTP PORT', options=env.SMTP_PORTS))
 
 # -----------------------------------------------------------------------------
 # Email authentication
@@ -76,14 +86,26 @@ ph.EMAIL_PASSWORD = st.text_input('Enter Your E-mail Password', '', placeholder=
 # -----------------------------------------------------------------------------
 st.header('Compose Your Message')
 env.EMAIL_SUBJECT = st.text_input("Subject", '', placeholder='Re: Free promotional phone')
-raw_receivers = st.text_input(
-    "Recievers", '', placeholder='example@nano.com, jane@doe.com, john@doe.com'
-).split(',')
-# Strip and filter empties: split(',') returns [''] for empty input, so len<=0 never triggers
-env.RECIEVERS_LIST = [addr.strip() for addr in raw_receivers if addr.strip()]
-if len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT or len(env.RECIEVERS_LIST) == 0:
-    ERROR_MESSAGE = '<p style="font-family:Courier; color:Red; font-size: 20px;">Please enter 1 to 20 receivers</p>'
-    st.markdown(ERROR_MESSAGE, unsafe_allow_html=True)
+
+MAILPIT_DEFAULT_RECEIVER = 'test@example.com'
+
+if send_via_mailpit:
+    preview_to = st.text_input(
+        'Preview To address (optional)',
+        '',
+        placeholder=MAILPIT_DEFAULT_RECEIVER,
+        help='Shown in the email To header only. Mail is captured by Mailpit, not delivered to this inbox.',
+    ).strip()
+    env.RECIEVERS_LIST = [preview_to or MAILPIT_DEFAULT_RECEIVER]
+else:
+    raw_receivers = st.text_input(
+        "Recievers", '', placeholder='example@nano.com, jane@doe.com, john@doe.com'
+    ).split(',')
+    # Strip and filter empties: split(',') returns [''] for empty input, so len<=0 never triggers
+    env.RECIEVERS_LIST = [addr.strip() for addr in raw_receivers if addr.strip()]
+    if len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT or len(env.RECIEVERS_LIST) == 0:
+        ERROR_MESSAGE = '<p style="font-family:Courier; color:Red; font-size: 20px;">Please enter 1 to 20 receivers</p>'
+        st.markdown(ERROR_MESSAGE, unsafe_allow_html=True)
 #print(env.RECIEVERS_LIST)
 
 # -----------------------------------------------------------------------------
@@ -102,13 +124,25 @@ if HTML:
 # -----------------------------------------------------------------------------
 if st.button('Send Email'):
     try:
-        if len(env.RECIEVERS_LIST) == 0 or len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT:
+        if not send_via_mailpit and (
+            len(env.RECIEVERS_LIST) == 0 or len(env.RECIEVERS_LIST) > env.RECEIVERS_LIMIT
+        ):
             st.error('Please enter 1 to 20 valid receiver addresses.')
         elif HTML is None:
             st.error('Please upload an HTML email template.')
         else:
             for receiver in env.RECIEVERS_LIST:
-                ph.send_html_email(receiver_email=receiver, html_doc=HTML)
-            st.write('Message Sent')
+                ph.send_html_email(
+                    receiver_email=receiver,
+                    html_doc=HTML,
+                    via_mailpit=send_via_mailpit,
+                )
+            if send_via_mailpit:
+                st.success(
+                    f'{len(env.RECIEVERS_LIST)} message(s) captured by Mailpit. '
+                    'Open http://localhost:8025 to view them.'
+                )
+            else:
+                st.write('Message Sent')
     except Exception as e:
         st.write(f'ERROR: {e}')

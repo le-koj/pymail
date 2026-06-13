@@ -1,24 +1,33 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/anaconda
 {
-	"name": "Anaconda (Python 3)",
-	"build": { 
-		"context": "..",
-		"dockerfile": "Dockerfile"
-	}
+  "name": "Pymail Dev Environment",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+  // Override the default CMD so the container stays alive for interactive dev
+  "overrideCommand": true,
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+  "forwardPorts": [
+    8501,
+    8025
+  ],
+  "portsAttributes": {
+    "8501": { "label": "Streamlit App", "onAutoForward": "notify" },
+    "8025": { "label": "Mailpit Web UI", "onAutoForward": "notify" }
+  },
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "python --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  },
 
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+  // Re-install deps from the mounted volume so edits to requirements.txt take effect
+  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt"
 }

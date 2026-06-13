@@ -4,6 +4,14 @@ This module defines SMTP settings, email addresses, and runtime constants
 consumed by ``pymail_html``, ``streamlit_email``, and related scripts.
 Values may be overridden at runtime (e.g. by the Streamlit UI).
 
+Environment Variable Overrides (for containerized / CI usage):
+    SMTP_HOST: SMTP server hostname.  Defaults to ``smtp.gmail.com``.
+               Set to ``mailpit`` inside the Docker Compose network.
+    SMTP_PORT: SMTP server port.  Defaults to ``465`` (SSL).
+    MAILPIT_HOST: Mailpit SMTP hostname for local testing.  Defaults to ``localhost``.
+                  Set to ``mailpit`` inside the Docker Compose network.
+    MAILPIT_PORT: Mailpit SMTP port.  Defaults to ``1025``.
+
 Attributes:
     RECEIVERS_LIMIT (int): Maximum number of recipients allowed per bulk send.
     SMTP_HOST (str): SMTP server hostname. Defaults to Gmail.
@@ -17,6 +25,7 @@ Attributes:
     SSL_CONTEXT (ssl.SSLContext): SSL context for secure SMTP connections.
 """
 
+import os
 import ssl
 
 # -----------------------------------------------------------------------------
@@ -26,11 +35,16 @@ RECEIVERS_LIMIT: int = 20
 
 # -----------------------------------------------------------------------------
 # SMTP server configuration
-# Default: Gmail. Override for custom providers (e.g. smtp.sendgrid.net).
+# Reads from environment variables for Docker/CI portability.
+# Defaults: Gmail (smtp.gmail.com:465).  Inside Docker Compose the env vars
+# are set to mailpit:1025 so emails are captured locally.
 # -----------------------------------------------------------------------------
-SMTP_HOST: str = 'smtp.gmail.com'
-SMTP_PORT: int = 465
-SMTP_PORTS: tuple = (465, 25, 26, 587, 2525)
+SMTP_HOST: str = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT: int = int(os.getenv('SMTP_PORT', '465'))
+SMTP_PORTS: tuple = (465, 25, 26, 587, 2525, 1025)
+
+MAILPIT_HOST: str = os.getenv('MAILPIT_HOST', 'localhost')
+MAILPIT_PORT: int = int(os.getenv('MAILPIT_PORT', '1025'))
 
 # -----------------------------------------------------------------------------
 # Email composition defaults
