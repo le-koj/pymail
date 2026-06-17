@@ -3,6 +3,7 @@
   "dockerComposeFile": "../docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
 
   // Override the default CMD so the container stays alive for interactive dev
   "overrideCommand": true,

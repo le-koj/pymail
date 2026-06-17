@@ -4,11 +4,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     # Match host UID/GID so bind-mounted files stay editable outside the container
     user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "8501:8501"
     environment:
+      - HOME=/home/dev
       - MAILPIT_HOST=mailpit
       - MAILPIT_PORT=1025
     volumes:
