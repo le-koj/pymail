@@ -29,5 +29,5 @@
   },
 
   // Re-install deps from the mounted volume so edits to requirements.txt take effect
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt"
+  "postCreateCommand": "pip install --user --no-cache-dir -r requirements.txt"
 }
