@@ -1,6 +1,6 @@
 # PyMail — HTML Email Client Agent
 
-**Version 2.0.0**
+**Version 2.0.0** · [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A Python toolkit for sending HTML and plain-text emails via SMTP. Supports Gmail, custom providers, bulk sends, and an interactive Streamlit web UI. Includes Docker Compose and a Dev Container setup with [Mailpit](https://github.com/axllent/mailpit) for local SMTP testing.
 
@@ -29,6 +29,7 @@ pymail/
 ├── docker-compose.yml      # App + Mailpit + SpamAssassin stack
 ├── .devcontainer/
 │   └── devcontainer.json   # VS Code / Cursor Dev Container config
+├── LICENSE                 # MIT license
 └── README.md
 ```
 
@@ -215,4 +216,6 @@ Using the normal account password will result in `535 Username and Password not 
 
 ## License
 
-See repository for license information.
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 [le-koj](https://github.com/le-koj)
